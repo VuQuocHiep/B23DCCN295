@@ -1,0 +1,41 @@
+from collections import deque
+from math import*
+from collections import defaultdict
+import bisect
+def build(v,l,r):
+    if l==r:
+        b[v]=a[l]
+        return
+    mid=(l+r)//2
+    build(2*v,l,mid)
+    build(2*v+1,mid+1,r)
+    b[v]=b[2*v]^b[2*v+1]
+def update(v,l,r,pos,val):
+    if l == r:
+        a[l]^=val
+        b[v]=a[l]
+        return
+    mid=(l+r)//2
+    if pos<=mid:
+        update(2*v,l,mid,pos,val)
+    else:
+        update(2*v+1,mid+1,r,pos,val)
+    b[v]=b[2*v]^b[2*v+1]
+def res(v,l,r,tl,tr):
+    if tl>tr:
+        return 0
+    if l==tl and r==tr:
+        return b[v]
+    mid=(l+r)//2
+    return res(2*v,l,mid,tl,min(mid,tr))^res(2*v+1,mid+1,r,max(mid+1,tl),tr)
+n,q=map(int,input().split())
+a=list(map(int,input().split()))
+b=[0]*(4*n+1)
+build(1,0,n-1)
+while q>0:
+    t,x,y=map(int,input().split())
+    if t==1:
+        update(1,0,n-1,x-1,y)
+    else:
+        print(res(1,0,n-1,x-1,y-1))
+    q-=1

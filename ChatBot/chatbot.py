@@ -40,7 +40,124 @@ default_answers = {
     "Ma trận liên thuộc Đồ thị có hướng":"Xét đồ thị có hướng 𝐺 = (𝑉,𝐸),𝑉 = {1,2,…,𝑛}, 𝐸 = {𝑒1, 𝑒2, …,𝑒𝑚}. Ma trận liên thuộc đỉnh-cung của 𝐺 là ma rận kích thước 𝑛 ×𝑚 được xây dựng như sau: 1, 𝑛ế𝑢 𝑖 𝑙à đỉ𝑛ℎ đầ𝑢 𝑐ủ𝑎 𝑐𝑢𝑛𝑔 𝑒𝑗  −1,𝑛ế𝑢 𝑖 𝑙à đỉ𝑛ℎ 𝑐𝑢ố𝑖 𝑐ủ𝑎 𝑐𝑢𝑛𝑔 𝑒𝑗 0, 𝑛ế𝑢 𝑖 𝑘ℎô𝑛𝑔 𝑙à đầ𝑢 𝑚ú𝑡 𝑐ủ𝑎 𝑐𝑢𝑛𝑔 𝑒�",
     "Ưu và nhược điểm của danh sách kề ":"Ưu điểm o Dễ dàng duyệt tất cả các đỉnh của một danh sách kề Dễ dàng duyệt các cạnh của đồ thị trong mỗi danh sách kề Tối ưu về phương pháp biểu diễn Nhược điểm Khó khăn cho người đọc có kỹ năng lập trình yếu ",
     "Ưu và nhược điểm của danh sách cạnh":"Ưu điểm o Trong trường hợp đồ thị thưa (𝑚 < 6𝑛), biểu diễn bằng danh sách cạnh tiết kiệm được không gian nhớ o Thuận lợi cho một số thuật toán chỉ quan tâm đến các cạnh của đồ thị Nhược điểm  Khi cần duyệt các đỉnh kề với đỉnh 𝑢 bắt buộc phải duyệt tất cả các cạnh của đồ thị Điều này làm cho thuật toán có chi phí tính toán cao",
+    "Thuật toán DFS":   "DFS(u):\n"
+                        "  Bước 1: Khởi tạo\n"
+                        "    stack = ∅\n"
+                        "    push(stack, u)\n"
+                        "    <Thăm đỉnh u>\n"
+                        "    chuaXet[u] = false\n"
+                        "\n"
+                        "  Bước 2: Lặp\n"
+                        "    while stack ≠ ∅:\n"
+                        "      s = pop(stack)\n"
+                        "      for t ∈ Ke(s):\n"
+                        "        if chuaXet[t]:\n"
+                        "          <Thăm đỉnh t>\n"
+                        "          chuaXet[t] = false\n"
+                        "          push(stack, s)\n"
+                        "          push(stack, t)\n"
+                        "          break\n"
+                        "\n"
+                        "  Bước 3: Trả lại kết quả\n"
+                        "    return <tập đỉnh đã duyệt>",
+    "Độ phức tạp thuật toán DFS": """Biểu diễn đồ thị bằng ma trận kề:
+                                  - Độ phức tạp: O(n^2), với n là số đỉnh.
+                                Biểu diễn đồ thị bằng danh sách cạnh:
+                                  - Độ phức tạp: O(n * m), với n là số đỉnh, m là số cạnh.
+                                Biểu diễn đồ thị bằng danh sách kề:
+                                  - Độ phức tạp: O(max(n, m)), với n là số đỉnh, m là số cạnh.""",
+    "Thuật toán BFS": """BFS(u):
+                        Bước 1: Khởi tạo
+                          queue = ∅
+                          push(queue, u)
+                          chuaXet[u] = false
+                        Bước 2: Lặp
+                          while queue ≠ ∅:
+                            s = pop(queue)
+                            <Thăm đỉnh s>
+                            for t ∈ Ke(s):
+                              if chuaXet[t]:
+                                push(queue, t)
+                                chuaXet[t] = false
+                        Bước 3: Trả lại kết quả
+                          return <tập đỉnh đã duyệt>""",
+    "Độ phức tạp thuật toán BFS": """Biểu diễn bằng ma trận kề:
+      Độ phức tạp O(n^2), với n là số đỉnh.
+    Biểu diễn bằng danh sách cạnh:
+      Độ phức tạp O(n.m), với n là số đỉnh, m là số cạnh.
+    Biểu diễn bằng danh sách kề:
+      Độ phức tạp O(max(n, m)), với n là số đỉnh, m là số cạnh.""",
+    "Thuật toán duyệt thành phần liên thông ": """Duyet-TPLT() {
+    Bước 1: Khởi tạo
+      soTPLT = 0   // số thành phần liên thông
+    Bước 2: Lặp
+      for u ∈ V:        // duyệt tất cả các đỉnh
+        if chuaXet[u]:
+          soTPLT = soTPLT + 1   // tăng số TPLT
+          BFS(u)   // hoặc DFS(u)
+          <Ghi nhận các đỉnh thuộc TPLT>
+    Bước 3: Trả lại kết quả
+      return <các TPLT>
+    }""",
+    "Thuật toán DFS tìm đường đi giữa các đỉnh": """DFS(s) {
+
+    Bước 1: Khởi tạo
+      stack = ∅
+      push(stack, s)
+      chuaXet[s] = false
+    Bước 2: Lặp
+      while stack ≠ ∅:
+        u = pop(stack)        // lấy đỉnh từ ngăn xếp
+        for v ∈ Ke(u):
+          if chuaXet[v]:      // nếu v chưa được duyệt
+            chuaXet[v] = false    // đánh dấu v đã duyệt
+            push(stack, u)        // đưa u trở lại ngăn xếp
+            push(stack, v)        // đưa v vào ngăn xếp
+            truoc[v] = u          // ghi nhận đường đi: v đến từ u
+            break                 // chỉ xét một đỉnh
+    Bước 3: Trả lại kết quả
+      return <tập đỉnh đã duyệt>
+    }""",
+    "Thuật toán kiểm tra tính liên thông mạnh": """Strong_Connected(G = <V, E>) {
+    Bước 1: Khởi tạo
+      ReInit()        // ∀u ∈ V: chuaXet[u] = true
+    Bước 2: Lặp
+      for u ∈ V:
+        if BFS(u) ≠ V    // hoặc DFS(u)
+          return false   // đồ thị không liên thông mạnh
+        else
+          ReInit()       // khởi tạo lại mảng chuaXet[]
+    Bước 3: Trả lại kết quả
+      return true        // đồ thị liên thông mạnh
+    }""",
+    "Thuật toán duyệt các đỉnh trụ": """Duyet_Tru(G = <V, E>) {
     
+    Bước 1: Khởi tạo
+      ReInit()    // ∀u ∈ V: chuaXet[u] = true
+    
+    Bước 2: Lặp
+      for u ∈ V:              // lấy mỗi đỉnh u
+        chuaXet[u] = false    // cấm BFS/DFS duyệt u
+        if BFS(v) ≠ V \ {u}   // hoặc DFS(v)
+          <Ghi nhận u là đỉnh trụ>
+        ReInit()              // khởi tạo lại mảng chuaXet[]
+    
+    Bước 3: Trả lại kết quả
+      return <tập các đỉnh trụ>
+    }""",
+    "Thuật toán duyệt các cạnh cầu": """Duyet_Cau(G = <V, E>) {
+    Bước 1: Khởi tạo
+      ReInit()    // ∀u ∈ V: chuaXet[u] = true
+    Bước 2: Lặp
+      for e ∈ E:                // lấy mỗi cạnh e
+        E = E \ {e}             // loại bỏ cạnh e khỏi đồ thị
+        if BFS(1) ≠ V           // hoặc DFS(1), kiểm tra từ đỉnh 1
+          <Ghi nhận e là cạnh cầu>
+        E = E ∪ {e}             // hoàn trả cạnh e
+        ReInit()                // khởi tạo lại mảng chuaXet[]
+    Bước 3: Trả lại kết quả
+      return <tập các cạnh cầu>
+    }"""
 }
 
 # Load dữ liệu từ file hoặc tạo mớ,

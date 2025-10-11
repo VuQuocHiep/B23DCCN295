@@ -10,6 +10,11 @@ import difflib
 DATA_FILE = "answers.json"
 
 default_answers = {
+    "hi": "Chào bạn 👋! Mình là Chatbot – trợ lý thông minh giúp bạn học Toán Rời Rạc.",
+    "hello": "Chào bạn 👋! Mình là Chatbot – trợ lý thông minh giúp bạn học Toán Rời Rạc.",
+    "xin chào": "Chào bạn 👋! Mình là Chatbot – trợ lý thông minh giúp bạn học Toán Rời Rạc.",
+    "bye": "Tạm biệt! Nếu bạn cần mình giúp gì thêm, đừng ngại hỏi nhé!",
+    "tạm biệt": "Tạm biệt! Nếu bạn cần mình giúp gì thêm, đừng ngại hỏi nhé!",
     "đơn đồ thị vô hướng": "Đơn đồ thị vô hướng G=<V,E> bao gồm V là tập các đỉnh, E là tập các cặp không có thứ tự gồm hai phần tử khác nhau của V gọi là các cạnh.",
     "đa đồ thị vô hướng": "Đa đồ thị vô hướng G=<V,E> bao gồm V là tập các đỉnh, E là họ các cặp không có thứ tự gồm hai phần tử khác nhau của V gọi là tập các cạnh. e1 ∈ E, e2 ∈ E được gọi là cạnh bội nếu chúng cùng tương ứng với một cặp đỉnh.",
     "giả đồ thị vô hướng": "Giả đồ thị vô hướng G=<V,E> bao gồm V là tập đỉnh, E là họ các cặp không có thứ tự gồm hai phần tử (hai phần tử không nhất thiết phải khác nhau) trong V được gọi là các cạnh. Cạnh e được gọi là khuyên nếu có dạng e = (u,u).",
@@ -392,7 +397,7 @@ default_answers = {
         d[v] = a(s, v)
         truoc[v] = s
       d[s] = 0
-    
+
     Bước 2 (Lặp):
       for k = 1 → n-1:
         for v ∈ V \ {s}:
@@ -479,10 +484,13 @@ else:
 training_mode = False
 pending_question = ""
 history = []
+bubble_history = []
+avatar_history = []
 dark_mode = False
-BG_COLOR = "#ffffff"
-USER_COLOR = "#A3D8F4"
-BOT_COLOR = "#FDE2E4"
+BG_COLOR = "#F7F8FC"
+USER_COLOR = "#B8D2FF"
+BOT_COLOR = "#B8D2FF"
+TEXT_COLOR = "#121212"
 
 
 # ------------------- Hàm lưu dữ liệu -------------------
@@ -493,28 +501,43 @@ def save_answers():
 
 # ------------------- Cập nhật màu -------------------
 def update_colors():
-    global BG_COLOR, USER_COLOR, BOT_COLOR
+    global BG_COLOR, USER_COLOR, BOT_COLOR, TEXT_COLOR
     if dark_mode:
-        BG_COLOR = "#2E2E2E"
-        USER_COLOR = "#4A90E2"
-        BOT_COLOR = "#FF6F61"
+        send_button.config(bg="#F7F8FC", fg="black")
+        reset_button.config(bg="#769AFF", fg=TEXT_COLOR)
+        dark_button.config(bg="#DEE5FF", fg=TEXT_COLOR)
+        clear_button.config(bg="#769AFF", fg=TEXT_COLOR)
+        BG_COLOR = "#26374D"
+        USER_COLOR = "#536D82"
+        BOT_COLOR = "#9DB2BF"
     else:
-        BG_COLOR = "#ffffff"
-        USER_COLOR = "#A3D8F4"
-        BOT_COLOR = "#FDE2E4"
+        send_button.config(bg="#040444", fg="white")
+        reset_button.config(bg="#DEE5FF", fg=TEXT_COLOR)
+        dark_button.config(bg="#769AFF", fg=TEXT_COLOR)
+        clear_button.config(bg="#DEE5FF", fg=TEXT_COLOR)
+        BG_COLOR = "#F7F8FC"
+        USER_COLOR = "#B8D2FF"
+        BOT_COLOR = "#B8D2FF"
     root.configure(bg=BG_COLOR)
     chat_canvas.configure(bg=BG_COLOR)
     chat_frame.configure(bg=BG_COLOR)
+    entry.config(bg="white" if not dark_mode else "#9DB2BF", fg=TEXT_COLOR)
+    for labels in history:
+        labels[0].config(bg=BOT_COLOR if labels[1] == "bot" else USER_COLOR, fg=TEXT_COLOR)
+    for bubbles in bubble_history:
+        bubbles.config(bg=BG_COLOR)
+    for avatars in avatar_history:
+        avatars.config(bg=USER_COLOR if avatars["text"] == "🧑" else BOT_COLOR)
 
 
 # ------------------- Hiển thị tin nhắn -------------------
 def add_message(msg, sender="bot"):
-    bubble = Frame(chat_frame, bg=BG_COLOR)
-    avatar = tk.Label(bubble, text="🤖" if sender == "bot" else "🧑", font=("Arial", 14), bg=BG_COLOR)
-    avatar.pack(side="left" if sender == "bot" else "right", padx=5)
     color = BOT_COLOR if sender == "bot" else USER_COLOR
+    bubble = Frame(chat_frame, bg=BG_COLOR)
+    avatar = tk.Label(bubble, text="🤖" if sender == "bot" else "🧑", font=("Arial", 30), bg=color)
+    avatar.pack(side="left" if sender == "bot" else "right", padx=5)
     lbl = tk.Label(
-        bubble, text=msg, bg=color, fg="black",
+        bubble, text=msg, bg=color, fg=TEXT_COLOR,
         padx=12, pady=8, wraplength=400,
         font=("Segoe UI", 11), justify="left", bd=0, relief="flat"
     )
@@ -522,7 +545,9 @@ def add_message(msg, sender="bot"):
     bubble.pack(anchor="w" if sender == "bot" else "e", fill="x", pady=3, padx=10)
     chat_canvas.update_idletasks()
     chat_canvas.yview_moveto(1.0)
-    history.append(f"{'Bot' if sender == 'bot' else 'Bạn'}: {msg}")
+    history.append([lbl, sender])
+    bubble_history.append(bubble)
+    avatar_history.append(avatar)
 
 
 # ------------------- Animation bot gõ -------------------
@@ -531,7 +556,7 @@ def bot_typing_animation(reply):
     avatar = tk.Label(bubble, text="🤖", font=("Arial", 14), bg=BG_COLOR)
     avatar.pack(side="left", padx=5)
     lbl = tk.Label(
-        bubble, text="", bg=BOT_COLOR, fg="black",
+        bubble, text="", bg=BOT_COLOR, fg=TEXT_COLOR,
         padx=12, pady=8, wraplength=400,
         font=("Segoe UI", 11), justify="left", bd=0, relief="flat"
     )
@@ -546,6 +571,9 @@ def bot_typing_animation(reply):
         chat_canvas.update_idletasks()
         chat_canvas.yview_moveto(1.0)
         time.sleep(0.02)
+    history.append([lbl, "bot"])
+    bubble_history.append(bubble)
+    avatar_history.append(avatar)
 
 
 # ------------------- Chuẩn hóa text -------------------
@@ -578,8 +606,8 @@ def bot_reply(user_input):
     if not found:
         training_mode = True
         pending_question = user_input.strip()
-        bot_typing_animation(
-            f"❓ Mình chưa biết trả lời thế nào cho '{user_input}'. Hãy nhập câu trả lời để mình học nhé!")
+        add_message(f"❓ Mình chưa biết trả lời thế nào cho '{user_input}'. Hãy nhập câu trả lời để mình học nhé!",
+                    sender="bot")
 
 
 # ------------------- Gửi tin nhắn -------------------
@@ -625,14 +653,26 @@ def reset_training():
     add_message("♻️ Mình đã reset toàn bộ câu trả lời đã học, trở về trạng thái ban đầu.", sender="bot")
 
 
+# ------------------ Clear screen ------------------
+def clear_screen():
+    global chat_frame, history, avatar_history, bubble_history
+    for child in chat_frame.winfo_children():
+        child.destroy()
+    history.clear()
+    avatar_history.clear()
+    bubble_history.clear()
+    add_message("Chào bạn 👋! Mình là Chatbot – trợ lý thông minh giúp bạn học Toán Rời Rạc.", sender="bot")
+
+
 # ------------------- GUI -------------------
 root = tk.Tk()
 root.title("🤖 Chatbot Toán Rời Rạc 2")
 root.geometry("650x700")
 root.configure(bg=BG_COLOR)
+root.resizable(0, 0)
 
 chat_canvas = Canvas(root, bg=BG_COLOR, highlightthickness=0)
-scrollbar = Scrollbar(root, orient="vertical", command=chat_canvas.yview)
+scrollbar = Scrollbar(chat_canvas, orient="vertical", command=chat_canvas.yview)
 chat_frame = Frame(chat_canvas, bg=BG_COLOR)
 
 chat_frame.bind("<Configure>", lambda e: chat_canvas.configure(scrollregion=chat_canvas.bbox("all")))
@@ -646,16 +686,20 @@ entry = Text(root, font=("Segoe UI", 12), height=3, wrap="word")
 entry.pack(side="top", fill="x", padx=10, pady=(0, 5), ipady=5)
 
 send_button = Button(root, text="Gửi", command=send_message,
-                     bg="#4CAF50", fg="white", font=("Segoe UI", 11, "bold"), padx=20, pady=5)
+                     bg="#040044", fg="white", font=("Segoe UI", 11, "bold"), padx=20, pady=5)
 send_button.pack(side="top", pady=(0, 5))
 
 dark_button = Button(root, text="🌙/☀️", command=toggle_dark_mode,
-                     bg="#555555", fg="white", font=("Segoe UI", 9, "bold"), padx=8, pady=3)
+                     bg="#769AFF", fg=TEXT_COLOR, font=("Segoe UI", 9, "bold"), padx=8, pady=3)
 dark_button.place(x=10, y=650)
 
 reset_button = Button(root, text="Reset Training", command=reset_training,
-                      bg="#FF5722", fg="white", font=("Segoe UI", 9, "bold"), padx=8, pady=3)
-reset_button.place(x=90, y=650)
+                      bg="#DEE5FF", fg=TEXT_COLOR, font=("Segoe UI", 9, "bold"), padx=8, pady=3)
+reset_button.place(x=430, y=650)
+
+clear_button = Button(root, text="Clear chat", command=clear_screen,
+                      bg="#DEE5FF", fg=TEXT_COLOR, font=("Segoe UI", 9, "bold"), padx=8, pady=3)
+clear_button.place(x=550, y=650)
 
 entry.bind("<Return>", on_enter)
 

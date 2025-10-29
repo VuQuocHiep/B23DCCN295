@@ -1,0 +1,50 @@
+import json
+import torch
+from sentence_transformers import SentenceTransformer, util
+from unidecode import unidecode
+
+DATA_PATH = "answers.json"
+
+# === Chuẩn hóa câu hỏi ===
+def normalize_text(text):
+    return unidecode(text.lower())
+
+# === Load dữ liệu ===
+with open(DATA_PATH, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+questions, answers = list(data.keys()), list(data.values())
+norm_questions = [normalize_text(q) for q in questions]
+
+# === Load model ===
+model = SentenceTransformer("keepitreal/vietnamese-sbert")
+embeddings = model.encode(norm_questions, convert_to_tensor=True)
+
+# === Hàm trả lời ===
+def get_answer(message):
+    norm_msg = normalize_text(message)
+    query_vec = model.encode(norm_msg, convert_to_tensor=True)
+    scores = util.cos_sim(query_vec, embeddings)[0]
+    top = torch.topk(scores, k=1)
+    if float(top.values[0]) < 0.45:
+        return "Xin lỗi, mình chưa có thông tin về câu hỏi này."
+    else:
+        return answers[int(top.indices[0])]
+
+# === Hàm lưu câu trả lời mới ===
+def save_new_qa(question, answer):
+    global data, questions, answers, norm_questions, embeddings
+
+    # Cập nhật dữ liệu
+    data[question] = answer
+    questions.append(question)
+    answers.append(answer)
+    norm_questions.append(normalize_text(question))
+
+    # Update embeddings
+    new_vec = model.encode(norm_questions[-1], convert_to_tensor=True)
+    embeddings = torch.cat([embeddings, new_vec.unsqueeze(0)], dim=0)
+
+    # Lưu vào file JSON
+    with open(DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)

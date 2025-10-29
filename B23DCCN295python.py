@@ -1,42 +1,202 @@
-# B23DCCN295
-from collections import deque
-from math import*
-from collections import defaultdict
-import bisect
-def build(v,l,r):
-    if l==r:
-        b[v]=a[l]
-        return
-    mid=(l+r)//2
-    build(2*v,l,mid)
-    build(2*v+1,mid+1,r)
-    b[v]=b[2*v]^b[2*v+1]
-def update(v,l,r,pos,val):
-    if l == r:
-        a[l]^=val
-        b[v]=a[l]
-        return
-    mid=(l+r)//2
-    if pos<=mid:
-        update(2*v,l,mid,pos,val)
-    else:
-        update(2*v+1,mid+1,r,pos,val)
-    b[v]=b[2*v]^b[2*v+1]
-def res(v,l,r,tl,tr):
-    if tl>tr:
-        return 0
-    if l==tl and r==tr:
-        return b[v]
-    mid=(l+r)//2
-    return res(2*v,l,mid,tl,min(mid,tr))^res(2*v+1,mid+1,r,max(mid+1,tl),tr)
-n,q=map(int,input().split())
-a=list(map(int,input().split()))
-b=[0]*(4*n+1)
-build(1,0,n-1)
-while q>0:
-    t,x,y=map(int,input().split())
-    if t==1:
-        update(1,0,n-1,x-1,y)
-    else:
-        print(res(1,0,n-1,x-1,y-1))
-    q-=1
+import streamlit as st
+import json
+import torch
+from sentence_transformers import SentenceTransformer, util
+from pathlib import Path
+import base64
+import time
+import html 
+# === CẤU HÌNH ===
+DATA_PATH = "answers.json"
+BG_PATH = r"C:\Users\ximen\Downloads\image.jpg"
+ICON_PATH = r"C:\Users\ximen\Downloads\chatbot.png"
+
+st.set_page_config(page_title="💬 Chatbot Toán Rời Rạc", layout="wide")
+
+# === LOAD DỮ LIỆU ===
+@st.cache_resource
+def load_data():
+    try:
+        with open(DATA_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        questions, answers = list(data.keys()), list(data.values())
+        model = SentenceTransformer("keepitreal/vietnamese-sbert")
+        embeddings = model.encode(questions, convert_to_tensor=True)
+        return model, questions, answers, embeddings
+    except Exception as e:
+        st.error(f"Lỗi khi đọc dữ liệu hoặc tải model: {e}")
+        return None, [], [], None
+
+def get_answer(query, model, questions, answers, embeddings):
+    query_vec = model.encode(query, convert_to_tensor=True)
+    scores = util.cos_sim(query_vec, embeddings)[0]
+    top = torch.topk(scores, k=1)
+    if float(top.values[0]) < 0.45:
+        return "Xin lỗi, mình chưa có thông tin về câu hỏi này."
+    return answers[int(top.indices[0])]
+
+@st.cache_data
+def load_b64(path):
+    p = Path(path)
+    if not p.exists():
+        st.error(f"Không tìm thấy file: {path}")
+        return ""
+    return base64.b64encode(p.read_bytes()).decode()
+
+# === TẢI TÀI NGUYÊN ===
+model, questions, answers, embeddings = load_data()
+bg_b64 = load_b64(BG_PATH)
+icon_b64 = load_b64(ICON_PATH)
+
+# === SESSION STATE ===
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "👋 Chào bạn! Mình là Chatbot – trợ lý Toán Rời Rạc."}
+    ]
+if "show_chat" not in st.session_state:
+    st.session_state.show_chat = False
+
+# === CSS ===
+st.markdown(f"""
+<style>
+.stApp {{
+    background-image: url("data:image/jpg;base64,{bg_b64}");
+    background-size: cover;
+    background-position: center;
+}}
+
+/* ICON CHAT */
+div[data-testid="stButton"] button {{
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background-image: url("data:image/png;base64,{icon_b64}");
+    background-size: cover;
+    cursor: pointer;
+    z-index: 2000;
+    display: block;
+}}
+
+/* KHUNG CHAT */
+.chat-container {{
+    position: fixed;
+    bottom: 70px;
+    right: 30px;
+    width: 400px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: rgba(255,255,255,0.9);
+    border-radius: 10px;
+    z-index: 1500;
+}}
+
+/* MESSAGE BUBBLE */
+.msg-left {{ display: flex; justify-content: flex-start; margin-bottom: 10px; padding-left: 5px; }}
+.msg-right {{ display: flex; justify-content: flex-end; margin-bottom: 10px; padding-right: 5px; margin-right: -3px; }} /* ĐÃ CHỈNH SỬA: Thêm margin-right: -3px để dịch chuyển tin nhắn người dùng */
+
+.msg-bubble {{ max-width: 70%; padding: 10px 15px; border-radius: 20px; word-wrap: break-word; }}
+.msg-left .msg-bubble {{ background-color: #f1f0f0; color: #111; }}
+.msg-right .msg-bubble {{ background-color: #0084ff; color: white; }}
+
+/* INPUT CỐ ĐỊNH DƯỚI MÀN HÌNH */
+.chat-input-container {{
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    background-color: white;
+    border-top: 1px solid #ddd;
+    z-index: 1500;
+}}
+.chat-input-container input {{
+    flex: 1;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    padding: 10px 15px;
+}}
+.chat-input-container input:focus {{
+    border-color: #0084ff;
+    background-color: white;
+}}
+.chat-input-container button {{
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+}}
+.chat-input-container button:hover {{
+    background-color: #006bbf;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+# === ICON TRIGGER ===
+if st.button("", key="chat_icon"):
+    st.session_state.show_chat = not st.session_state.show_chat
+
+if st.session_state.show_chat:
+    # --- CHAT CONTAINER ---
+    chat_container = st.container()  # tách container riêng để render tin nhắn
+    input_container = st.container() # container riêng cho input
+
+    # --- HIỂN THỊ TIN NHẮN ---
+    with chat_container:
+        for msg in st.session_state.messages:
+            if msg["role"] == "user":
+                st.markdown(f'<div class="msg-right"><div class="msg-bubble">{msg["content"]}</div></div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="msg-left"><div class="msg-bubble">{msg["content"]}</div></div>', unsafe_allow_html=True)
+
+    # --- FORM NHẬP ---
+    with input_container:
+        with st.form(key="chat_form", clear_on_submit=True):
+            st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
+            cols = st.columns([4, 1])
+            with cols[0]:
+                user_query = st.text_input("", key="user_input_text", label_visibility="collapsed")
+            with cols[1]:
+                is_send = st.form_submit_button("Gửi")
+            st.markdown('</div>', unsafe_allow_html=True)
+            # Hiển thị câu hỏi của người dùng ngay
+            st.markdown(
+                f'<div class="msg-right"><div class="msg-bubble">{html.escape(user_query)}</div></div>',
+                unsafe_allow_html=True
+            )
+
+            # --- Chỉ xử lý khi người dùng nhập và nhấn gửi ---
+            if is_send and user_query.strip():
+                # Lưu tin nhắn người dùng
+                st.session_state.messages.append({"role": "user", "content": user_query})
+
+                if embeddings is not None:
+                    ans = get_answer(user_query, model, questions, answers, embeddings)
+
+                    # --- Hiệu ứng gõ chữ ---
+                    msg_placeholder = st.empty()
+                    displayed_text = ""
+                    for c in ans:
+                        displayed_text += c
+                        safe_text = html.escape(displayed_text)
+                        msg_placeholder.markdown(
+                            f'<div class="msg-left"><div class="msg-bubble">{safe_text}</div></div>',
+                            unsafe_allow_html=True
+                        )
+                        time.sleep(0.02)
+
+                    # Lưu tin nhắn bot
+                    st.session_state.messages.append({"role": "assistant", "content": ans})
+                else:
+                    st.warning("Model chưa được tải.")  # chỉ cảnh báo, không lưu vào chat
+
+
+

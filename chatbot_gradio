@@ -1,0 +1,134 @@
+import gradio as gr
+from rag_module import get_answer, save_new_qa
+import time
+
+# === HIỆU ỨNG GÕ CHỮ ===
+def typewriter_effect(text):
+    result = ""
+    for ch in text:
+        result += ch
+        time.sleep(0.015)
+        yield result
+
+# === CSS ===
+custom_css = """
+body {
+    background-color: #ffffff;
+    color: #000000;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+body.dark-mode {
+    background-color: #1f1f1f;
+    color: #ffffff;
+}
+.message.user {
+    background-color: #DCF8C6 !important;
+    color: #000 !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+}
+.message.assistant {
+    background-color: #E8EAF6 !important;
+    color: #000 !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+}
+body.dark-mode .message.user {
+    background-color: #2e7d32 !important;
+    color: #fff !important;
+}
+body.dark-mode .message.assistant {
+    background-color: #3949ab !important;
+    color: #fff !important;
+}
+#toggle-btn {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    z-index: 9999;
+    background-color: #f0f0f0;
+    color: #333;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+#toggle-btn:hover { transform: scale(1.1); }
+body.dark-mode #toggle-btn { background-color: #333; color: #f5f5f5; }
+"""
+
+# === JS DARK MODE ===
+toggle_js = """
+<script>
+let isDark = false;
+function toggleTheme() {
+  isDark = !isDark;
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+}
+</script>
+"""
+
+# === GIAO DIỆN ===
+with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
+    gr.HTML(toggle_js)
+    gr.HTML("<button id='toggle-btn' onclick='toggleTheme()'>🌙</button>")
+
+    gr.Markdown("## 💬 Chatbot Toán Rời Rạc — PTIT Assistant")
+
+    chatbot = gr.Chatbot(type="messages", height=420, show_copy_button=True)
+
+    with gr.Row():
+        msg = gr.Textbox(placeholder="Nhập câu hỏi Toán Rời Rạc...", autofocus=True, scale=8)
+        send_btn = gr.Button("📤 Gửi", scale=1)
+        clear_btn = gr.Button("🧹 Xóa", scale=1)
+
+    # State tạm cho câu hỏi chưa biết
+    unknown_question = gr.State(value="")
+
+    # === HÀM PHẢN HỒI ===
+    def respond(message, chat_history, unknown_q):
+        if not message.strip():
+            return "", chat_history, unknown_q
+
+        chat_history.append({"role": "user", "content": message})
+        reply = get_answer(message)
+
+        if reply == "Xin lỗi, mình chưa có thông tin về câu hỏi này.":
+            # Lưu câu hỏi chưa biết
+            unknown_q = message
+            chat_history.append({"role": "assistant", "content": reply + " Bạn có thể dạy mình câu trả lời không?"})
+            return "", chat_history, unknown_q
+
+        # Biết câu trả lời
+        chat_history.append({"role": "assistant", "content": ""})
+        for partial in typewriter_effect(reply):
+            chat_history[-1]["content"] = partial
+            yield "", chat_history, unknown_q
+
+    # === HÀM LƯU CÂU TRẢ LỜI MỚI ===
+    def save_answer(new_answer, chat_history, unknown_q):
+        if unknown_q and new_answer.strip():
+            save_new_qa(unknown_q, new_answer)
+            chat_history.append({"role": "assistant", "content": "Cảm ơn! Mình đã ghi nhớ câu trả lời mới."})
+        return "", chat_history, ""
+
+    # === SỰ KIỆN ===
+    msg.submit(respond, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
+    send_btn.click(respond, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
+
+    # Nếu người dùng nhập câu trả lời mới cho chatbot
+    msg.submit(save_answer, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
+
+    clear_btn.click(lambda: [], None, chatbot)
+
+# === CHẠY ===
+if __name__ == "__main__":
+    demo.launch()

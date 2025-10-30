@@ -1,8 +1,22 @@
 import gradio as gr
 import time
+import json
 from rag_module import get_answer, save_new_qa, reset_data
 
+CHAT_HISTORY_PATH = "chat_history.json"
 DATA_PATH = "answers.json"
+
+# --- Lưu & load chat ---
+def save_chat_history(chat_history, file_path=CHAT_HISTORY_PATH):
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(chat_history, f, ensure_ascii=False, indent=4)
+
+def load_chat_history(file_path=CHAT_HISTORY_PATH):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
 
 # --- Hiệu ứng gõ chữ ---
 def typewriter_effect(text):
@@ -14,10 +28,8 @@ def typewriter_effect(text):
 
 # --- CSS giữ nguyên nhưng cập nhật nút dark/light ---
 custom_css = """
-/* Các style chat, user/assistant giữ nguyên */
 .message.user { ... }
 .message.assistant { ... }
-/* ... các style khác ... */
 
 /* Nút dark/light 🌙 */
 #toggle-btn {
@@ -62,13 +74,14 @@ function toggleTheme() {
 </script>
 """
 
-
 with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
     gr.HTML(toggle_js)
     gr.HTML("<button id='toggle-btn' onclick='toggleTheme()'>🌙</button>")
     gr.Markdown("## 💬 Chatbot Toán Rời Rạc 2 — PTIT Assistant")
 
-    chatbot = gr.Chatbot(type="messages", height=420)
+    # --- Chatbot chính ---
+    chatbot_history = load_chat_history()
+    chatbot = gr.Chatbot(type="messages", height=420, value=chatbot_history)
 
     with gr.Row():
         msg = gr.Textbox(
@@ -78,9 +91,24 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
             max_lines=3,
             scale=4
         )
-        send_btn = gr.Button("📤 Gửi", scale=1)
-        clear_btn = gr.Button("🧹 Xóa", scale=1)
-        reset_btn = gr.Button("🔄 Reset", scale=1)
+        with gr.Row():
+            with gr.Column():
+                send_btn = gr.Button("📤 Gửi", scale=1)
+            with gr.Column():
+                clear_btn = gr.Button("🧹 Xóa", scale=1)
+
+        with gr.Row():
+            with gr.Column():
+                reset_btn = gr.Button("🔄 Reset", scale=1)
+            with gr.Column():
+                view_history_btn = gr.Button("📜 Xem lịch sử chat cũ", scale=1)
+
+    old_chat_display = gr.Textbox(
+        label="Lịch sử chat cũ",
+        lines=10,
+        interactive=False,
+        visible=False
+    )
 
     unknown_question = gr.State("")
 
@@ -98,6 +126,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
                 chat_history[-1]["content"] = partial
                 yield "", chat_history, ""
             unknown_q = ""
+            save_chat_history(chat_history)
             return
 
         chat_history.append({"role": "user", "content": message})
@@ -106,6 +135,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
         if reply == "Xin lỗi, mình chưa có thông tin về câu hỏi này.":
             unknown_q = message
             chat_history.append({"role": "assistant", "content": "Mình chưa biết câu này. Bạn có thể cho mình biết câu trả lời không?"})
+            save_chat_history(chat_history)
             yield "", chat_history, unknown_q
             return
 
@@ -114,27 +144,34 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
             chat_history[-1]["content"] = partial
             yield "", chat_history, unknown_q
 
+        save_chat_history(chat_history)
+
     # --- Sự kiện ---
     msg.submit(respond, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
     send_btn.click(respond, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
     clear_btn.click(lambda: [], None, chatbot, queue=False)
 
-
     # --- Reset dữ liệu nhưng giữ chat ---
     def reset_and_notify(chat_history):
         reset_data()  # reset file JSON + embeddings
-        # thêm message thông báo vào chat hiện tại
         chat_history.append({
             "role": "assistant",
             "content": "Mình đã xóa tất cả những gì đã học!"
         })
+        save_chat_history(chat_history)
         return chat_history
 
+    reset_btn.click(reset_and_notify, inputs=[chatbot], outputs=[chatbot])
 
-    reset_btn.click(
-        reset_and_notify,
-        inputs=[chatbot],
-        outputs=[chatbot]
-    )
+    # --- Hiển thị lịch sử chat cũ ---
+    def show_old_chat():
+        history = load_chat_history()
+        display_text = ""
+        for msg in history:
+            role = "Bạn" if msg['role'] == 'user' else "Bot"
+            display_text += f"{role}: {msg['content']}\n"
+        return gr.update(value=display_text, visible=True)
+
+    view_history_btn.click(show_old_chat, inputs=[], outputs=[old_chat_display])
 
 demo.launch()

@@ -2,36 +2,81 @@ import json
 import torch
 from sentence_transformers import SentenceTransformer, util
 from unidecode import unidecode
+import openai
+import difflib
 
 DATA_PATH = "answers.json"
+openai.api_key = "YOUR_OPENAI_API_KEY"
 
 def normalize_text(text):
-    return unidecode(text.lower())
+    return unidecode(text.lower().strip())
 
 # --- Load dữ liệu gốc ---
 with open(DATA_PATH, "r", encoding="utf-8") as f:
-    original_data = json.load(f)  # dữ liệu gốc
-    data = original_data.copy()    # dữ liệu đang dùng
+    original_data = json.load(f)
+    data = original_data.copy()
 
 questions, answers = list(data.keys()), list(data.values())
 norm_questions = [normalize_text(q) for q in questions]
 
+# --- Load embedding model ---
 model = SentenceTransformer("keepitreal/vietnamese-sbert")
 embeddings = model.encode(norm_questions, convert_to_tensor=True)
 
-def get_answer(message):
+def get_answer(message, top_k=3, similarity_threshold=0.45, diff_ratio_threshold=0.8):
     norm_msg = normalize_text(message)
+
+    # 1️⃣ Exact match
+    for q, a in data.items():
+        if normalize_text(q) == norm_msg:
+            return a
+
+    # 2️⃣ Fuzzy match (difflib)
+    close_matches = difflib.get_close_matches(norm_msg, norm_questions, n=1, cutoff=diff_ratio_threshold)
+    if close_matches:
+        idx = norm_questions.index(close_matches[0])
+        return answers[idx]
+
+    # 3️⃣ Embedding match
     query_vec = model.encode(norm_msg, convert_to_tensor=True)
     scores = util.cos_sim(query_vec, embeddings)[0]
-    top = torch.topk(scores, k=1)
-    if float(top.values[0]) < 0.45:
-        return "Xin lỗi, mình chưa có thông tin về câu hỏi này."
-    else:
-        return answers[int(top.indices[0])]
+    topk = torch.topk(scores, k=min(top_k, len(scores)))
+    top_indices = topk.indices.tolist()
+    top_scores = topk.values.tolist()
 
+    top_answers = [answers[i] for i, s in zip(top_indices, top_scores) if s >= similarity_threshold]
+
+    if not top_answers:
+        return "Xin lỗi, mình chưa có thông tin về câu hỏi này."
+
+    # 4️⃣ Nếu chỉ có 1 top answer, trả ngay
+    if len(top_answers) == 1:
+        return top_answers[0]
+
+    # 5️⃣ GPT tổng hợp khi nhiều câu trả lời tốt
+    prompt = f"""
+Bạn là trợ lý Toán Rời Rạc. Người dùng hỏi:
+{message}
+
+Dựa trên các câu trả lời gần đúng sau:
+{top_answers}
+
+Hãy trả lời chính xác, đầy đủ và súc tích.
+"""
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+        return response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        print("GPT error:", e)
+        return top_answers[0]
+
+# --- Lưu câu hỏi mới ---
 def save_new_qa(question, answer, data_path=DATA_PATH):
     global questions, answers, norm_questions, embeddings, data
-    # load dữ liệu mới nhất
     with open(data_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     data[question] = answer
@@ -43,7 +88,7 @@ def save_new_qa(question, answer, data_path=DATA_PATH):
     norm_questions.append(normalize_text(question))
     embeddings = model.encode(norm_questions, convert_to_tensor=True)
 
-# --- Hàm reset về dữ liệu gốc ---
+# --- Reset dữ liệu ---
 def reset_data(data_path=DATA_PATH):
     global questions, answers, norm_questions, embeddings, data
     data = original_data.copy()

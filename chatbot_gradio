@@ -1,10 +1,10 @@
 import gradio as gr
 import time
-from rag_module import get_answer, save_new_qa
+from rag_module import get_answer, save_new_qa, reset_data
 
 DATA_PATH = "answers.json"
 
-# === HIỆU ỨNG GÕ CHỮ ===
+# --- Hiệu ứng gõ chữ ---
 def typewriter_effect(text):
     result = ""
     for ch in text:
@@ -12,63 +12,42 @@ def typewriter_effect(text):
         time.sleep(0.015)
         yield result
 
-# === CSS giữ nguyên + bổ sung ===
+# --- CSS giữ nguyên nhưng cập nhật nút dark/light ---
 custom_css = """
-body {
-    background-color: #ffffff;
-    color: #000000;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-body.dark-mode {
-    background-color: #1f1f1f;
-    color: #ffffff;
-}
-.message.user {
-    background-color: #DCF8C6 !important;
-    color: #000 !important;
-    border-radius: 12px !important;
-    padding: 8px 12px !important;
-}
-.message.assistant {
-    background-color: #E8EAF6 !important;
-    color: #000 !important;
-    border-radius: 12px !important;
-    padding: 8px 12px !important;
-}
-body.dark-mode .message.user {
-    background-color: #2e7d32 !important;
-    color: #fff !important;
-}
-body.dark-mode .message.assistant {
-    background-color: #3949ab !important;
-    color: #fff !important;
-}
+/* Các style chat, user/assistant giữ nguyên */
+.message.user { ... }
+.message.assistant { ... }
+/* ... các style khác ... */
+
+/* Nút dark/light 🌙 */
 #toggle-btn {
-    position: fixed;
-    top: 15px;
-    right: 20px;
+    position: fixed;        
+    top: 10px;               
+    right: 10px;            
     z-index: 9999;
     background-color: #f0f0f0;
     color: #333;
     border: none;
     border-radius: 50%;
-    width: 35px;
-    height: 35px;
-    font-size: 16px;
+    width: 50px;            
+    height: 50px;           
+    font-size: 22px;        
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transition: background-color 0.3s ease, transform 0.2s ease;
 }
-#toggle-btn:hover { transform: scale(1.1); }
-body.dark-mode #toggle-btn { background-color: #333; color: #f5f5f5; }
 
-#input-msg textarea {
-    font-size: 16px;
-    padding: 8px 12px;
+#toggle-btn:hover { 
+    transform: scale(1.1); 
+}
+
+body.dark-mode #toggle-btn { 
+    background-color: #333; 
+    color: #f5f5f5; 
 }
 """
 
-# === JS toggle dark mode ===
+# --- JS toggle dark mode giữ nguyên ---
 toggle_js = """
 <script>
 let isDark = false;
@@ -83,43 +62,36 @@ function toggleTheme() {
 </script>
 """
 
-# === Giao diện Gradio ===
+
 with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
     gr.HTML(toggle_js)
     gr.HTML("<button id='toggle-btn' onclick='toggleTheme()'>🌙</button>")
-
-    gr.Markdown("## 💬 Chatbot Toán Rời Rạc — PTIT Assistant")
+    gr.Markdown("## 💬 Chatbot Toán Rời Rạc 2 — PTIT Assistant")
 
     chatbot = gr.Chatbot(type="messages", height=420)
 
-    # --- Row nhập câu hỏi + nút ---
     with gr.Row():
         msg = gr.Textbox(
             placeholder="Nhập câu hỏi Toán Rời Rạc...",
             show_label=False,
             lines=1,
             max_lines=3,
-            elem_id="input-msg",
             scale=4
         )
         send_btn = gr.Button("📤 Gửi", scale=1)
         clear_btn = gr.Button("🧹 Xóa", scale=1)
+        reset_btn = gr.Button("🔄 Reset", scale=1)
 
-    # State lưu câu hỏi chưa biết
     unknown_question = gr.State("")
 
-
+    # --- Phản hồi chatbot ---
     def respond(message, chat_history, unknown_q):
         if not message.strip():
             return "", chat_history, unknown_q
 
-        # Nếu đang chờ câu trả lời cho câu hỏi trước
         if unknown_q:
-            # append tin nhắn người dùng
             chat_history.append({"role": "user", "content": message})
-            # lưu câu trả lời vào JSON
             save_new_qa(unknown_q, message, DATA_PATH)
-            # append assistant với hiệu ứng gõ chữ
             chat_history.append({"role": "assistant", "content": ""})
             text_to_show = f"Cảm ơn! Mình đã học xong câu trả lời mới: {message}"
             for partial in typewriter_effect(text_to_show):
@@ -133,8 +105,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
 
         if reply == "Xin lỗi, mình chưa có thông tin về câu hỏi này.":
             unknown_q = message
-            chat_history.append(
-                {"role": "assistant", "content": "Mình chưa biết câu này. Bạn có thể cho mình biết câu trả lời không?"})
+            chat_history.append({"role": "assistant", "content": "Mình chưa biết câu này. Bạn có thể cho mình biết câu trả lời không?"})
             yield "", chat_history, unknown_q
             return
 
@@ -143,10 +114,27 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
             chat_history[-1]["content"] = partial
             yield "", chat_history, unknown_q
 
-
-    # === Sự kiện ===
+    # --- Sự kiện ---
     msg.submit(respond, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
     send_btn.click(respond, [msg, chatbot, unknown_question], [msg, chatbot, unknown_question])
     clear_btn.click(lambda: [], None, chatbot, queue=False)
+
+
+    # --- Reset dữ liệu nhưng giữ chat ---
+    def reset_and_notify(chat_history):
+        reset_data()  # reset file JSON + embeddings
+        # thêm message thông báo vào chat hiện tại
+        chat_history.append({
+            "role": "assistant",
+            "content": "Mình đã xóa tất cả những gì đã học!"
+        })
+        return chat_history
+
+
+    reset_btn.click(
+        reset_and_notify,
+        inputs=[chatbot],
+        outputs=[chatbot]
+    )
 
 demo.launch()

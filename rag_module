@@ -5,13 +5,13 @@ from unidecode import unidecode
 
 DATA_PATH = "answers.json"
 
-# === Chuẩn hóa văn bản ===
 def normalize_text(text):
     return unidecode(text.lower())
 
-# === Load dữ liệu + model ===
+# --- Load dữ liệu gốc ---
 with open(DATA_PATH, "r", encoding="utf-8") as f:
-    data = json.load(f)
+    original_data = json.load(f)  # dữ liệu gốc
+    data = original_data.copy()    # dữ liệu đang dùng
 
 questions, answers = list(data.keys()), list(data.values())
 norm_questions = [normalize_text(q) for q in questions]
@@ -19,7 +19,6 @@ norm_questions = [normalize_text(q) for q in questions]
 model = SentenceTransformer("keepitreal/vietnamese-sbert")
 embeddings = model.encode(norm_questions, convert_to_tensor=True)
 
-# === Hàm trả lời chatbot ===
 def get_answer(message):
     norm_msg = normalize_text(message)
     query_vec = model.encode(norm_msg, convert_to_tensor=True)
@@ -30,10 +29,9 @@ def get_answer(message):
     else:
         return answers[int(top.indices[0])]
 
-# === Hàm lưu câu hỏi + câu trả lời mới ===
 def save_new_qa(question, answer, data_path=DATA_PATH):
-    global questions, answers, norm_questions, embeddings
-
+    global questions, answers, norm_questions, embeddings, data
+    # load dữ liệu mới nhất
     with open(data_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     data[question] = answer
@@ -43,4 +41,14 @@ def save_new_qa(question, answer, data_path=DATA_PATH):
     questions.append(question)
     answers.append(answer)
     norm_questions.append(normalize_text(question))
+    embeddings = model.encode(norm_questions, convert_to_tensor=True)
+
+# --- Hàm reset về dữ liệu gốc ---
+def reset_data(data_path=DATA_PATH):
+    global questions, answers, norm_questions, embeddings, data
+    data = original_data.copy()
+    with open(data_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    questions, answers = list(data.keys()), list(data.values())
+    norm_questions = [normalize_text(q) for q in questions]
     embeddings = model.encode(norm_questions, convert_to_tensor=True)

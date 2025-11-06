@@ -5,18 +5,14 @@
     "Đơn đồ thị có hướng": "Đơn đồ thị có hướng G=<V,E> bao gồm V là tập các đỉnh, E là tập các cặp có thứ tự gồm hai phần tử của V gọi là các cung.",
     "Đa đồ thị có hướng": "Đa đồ thị có hướng G=<V,E> bao gồm V là tập đỉnh, E là họ các cặp có thứ tự gồm hai phần tử khác nhau của V được gọi là các cung. Hai cung e1, e2 tương ứng với cùng một cặp đỉnh được gọi là cung lặp.",
     "hai đỉnh kề nhau": "Hai đỉnh 𝑢 và 𝑣 của đồ thị vô hướng 𝐺 = <𝑉,𝐸 > được gọi là kề nhau nếu (𝑢,𝑣)là cạnh thuộc đồ thị 𝐺. Nếu 𝑒 = (𝑢,𝑣)là cạnh của đồ thị 𝐺 thì ta nói cạnh này liên thuộc với hai đỉnh 𝑢 và 𝑣.",
-    "tổng bậc của đỉnh": "Giả sử 𝐺 =< 𝑉,𝐸 > là đồ thị vô hướng với 𝑚 cạnh, khi đó: Tổng deg𝑣 = 2𝑚.",
     "Đường đi đồ thị": "Đường đi độ dài 𝑛 từ đỉnh 𝑢 đến đỉnh 𝑣 trên đồ thị vô hướng 𝐺 =< 𝑉,𝐸 >là dãy x0, 𝑥1,.. . , 𝑥𝑛−1,𝑥𝑛, trong đó 𝑛 là số nguyên dương, 𝑥0 = 𝑢, 𝑥𝑛 = 𝑣,(𝑥𝑖,𝑥𝑖+1) ∈ 𝐸, 𝑖 = 0,1,2,...,𝑛 − 1.",
     "Chu trình đồ thị": "Chu trình là một đường đi có đỉnh đầu trùng với đỉnh cuối (𝑢 = 𝑣).",
-    "đồ thị vô hướng liên thông": "Đồ thị vô hướng được gọi là liên thông nếu luôn tìm được đường đi giữa hai đỉnh bất kỳ của nó.",
     "Cạnh cầu": "Cạnh 𝑒 ∈ 𝐸 được gọi là cầu nếu loại bỏ e làm tăng thành phần liên thông của đồ thị.",
     "Đỉnh trụ": "Đỉnh 𝑢 ∈ 𝑉 được gọi là đỉnh trụ nếu loại bỏ 𝑢 cùng với các cạnh nối với 𝑢 làm tăng thành phần liên thông của đồ thị.",
-    "hai đỉnh kề nhau ": "Nếu 𝑒 =(𝑢,𝑣) là cung của đồ thị có hướng 𝐺 thì ta nói hai đỉnh 𝑢 và 𝑣 là kề nhau, và nói cung (𝑢,𝑣) nối đỉnh 𝑢 với đỉnh 𝑣, hoặc nói cung này đi ra khỏi đỉnh 𝑢 và đi vào đỉnh 𝑣.",
     "Bán bậc ra": "Số cung của đồ thị đi ra khỏi 𝑣 và ký hiệu là 𝑑𝑒𝑔+(𝑣).",
     "Bán bậc vào": "Là số cung của đồ thị đi vào 𝑣 và ký hiệu là 𝑑𝑒𝑔−(𝑣).",
     "liên thông mạnh": "Đồ thị có hướng được gọi là liên thông mạnh nếu giữa hai đỉnh bất kỳ 𝑢 ∈ 𝑉,𝑣 ∈ 𝑉 đều có đường đi từ 𝑢 đến 𝑣.",
     "liên thông yếu": "Đồ thị có hướng được gọi là liên thông yếu nếu đồ thị vô hướng tương ứng với nó là liên thông.",
-    "định chiều được ": "Là đồ thị có thể biến đổi các cạnh thành các cung để nhận được một đồ thị có hướng liên thông mạnh.",
     "Đồ thị đầy đủ ": "Là đơn đồ thị vô hướng 𝑛 đỉnh, ký hiệu là 𝐾𝑛, mà giữa hai đỉnh bất kỳ của nó đều có cạnh nối.",
     "Đồ thị vòng": "Là đơn đồ thị vô hướng 𝑛 đỉnh, ký hiệu là 𝐶𝑛 (𝑛 ≥ 3) gồm các cạnh (1,2),(2,3),…,(𝑛 − 1,𝑛),(𝑛,1).",
     "Đồ thị bánh xe": "Là đồ thị 𝑛 đỉnh, ký hiệu là 𝑊𝑛, thu được bằng cách bổ sung một đỉnh nối với tất cả các đỉnh của đồ thị vòng 𝐶𝑛−1.",
@@ -67,5 +63,4 @@
     "Lát cắt trong mạng": "Là một phân hoạch tập đỉnh V thành X và X* sao cho s ∈ X và t ∈ X*.\nKhả năng thông qua của lát cắt: c(X, X*) = Tổng khả năng thông qua của các cung (v, w) với v ∈ X, w ∈ X*.",
     "Đường tăng luồng ": "Là một đường đi từ s đến t trong đồ thị tăng luồng Gf (đồ thị Gf được xây dựng dựa trên luồng f hiện tại và khả năng thông qua còn dư của các cạnh).",
     "Ford-Fulkerson": "Dùng để tìm luồng cực đại trong mạng.\n1. Bắt đầu với luồng f = 0.\n 2. Xây dựng đồ thị tăng luồng Gf.\n 3. Tìm một đường tăng luồng P từ s đến t trong Gf:\n  - Nếu không có: Dừng lại. Luồng f hiện tại là cực đại.\n  - Nếu có: Tăng luồng f dọc theo đường P, tạo luồng mới f', và quay lại bước 2."
-   
 }
